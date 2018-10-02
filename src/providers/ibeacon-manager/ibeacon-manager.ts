@@ -1,39 +1,54 @@
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Events, Platform } from 'ionic-angular';
+
 declare let cordova: any;
 
 @Injectable()
 export class IBeaconManager {
 
   private beacons: any[] = [];
+  private httpEndPoint: string = '';
 
-  constructor(private platform: Platform, private ev: Events) {
+  constructor(private platform: Platform, private ev: Events, private http: HttpClient) {
 
   }
 
-  async setup() {
-    await this.platform.ready();
+  async setup(httpEndPoint: string) {
+    this.httpEndPoint = httpEndPoint;
 
-    // create beacons
-    this.beacons.push(this.createBeacon('699ebc80-e1f3-11e3-9a0f-0cf3ee3bc012', 'beacon-1', 6, 50201));
-    this.beacons.push(this.createBeacon('699ebc80-e1f3-11e3-9a0f-0cf3ee3bc012', 'beacon-2', 6, 50098));
+    if (this.platform.is('cordova')) {
+      await this.platform.ready();
 
-    // hook up events
-    this.hookUpEvents();
+      // create beacons
+      this.beacons.push(this.createBeacon('699ebc80-e1f3-11e3-9a0f-0cf3ee3bc012', 'beacon-1', 6, 50201));
+      this.beacons.push(this.createBeacon('699ebc80-e1f3-11e3-9a0f-0cf3ee3bc012', 'beacon-2', 6, 50098));
 
-    cordova.plugins.locationManager.requestAlwaysAuthorization();
+      // hook up events
+      this.hookUpEvents();
+
+      cordova.plugins.locationManager.requestAlwaysAuthorization();
+    }
   }
 
   startMonitoring() {
+    if (!this.platform.is('cordova'))
+      return;
+
     // start monitoring the beacons
     for (let b of this.beacons) {
       cordova.plugins.locationManager.startMonitoringForRegion(b)
         .fail((e) => { console.error(e); })
         .done(() => { console.log('Native layer received the request to monitor :: ' + b.identifier + ',' + b.major + ',' + b.minor) });
     }
+
+
   }
 
   stopMonitoring() {
+    if (!this.platform.is('cordova'))
+      return;
+
     // stop monitoring beacons
     for (let b of this.beacons) {
       cordova.plugins.locationManager.stopMonitoringForRegion(b)
@@ -55,16 +70,25 @@ export class IBeaconManager {
     delegate.didDetermineStateForRegion = (pluginResult) => {
       if (pluginResult.state === 'CLRegionStateInside') {
         this.ev.publish('onBeaconEnter', pluginResult.region);
+
+        // log to an http endpoint
+        if (this.httpEndPoint) {
+          this.sendHttpMessage(BeaconEvent.entry, pluginResult.region);
+        }
       }
       else if (pluginResult.state === 'CLRegionStateOutside') {
         this.ev.publish('onBeaconExit', pluginResult.region);
+
+        // log to an http endpoint
+        if (this.httpEndPoint) {
+          this.sendHttpMessage(BeaconEvent.exit, pluginResult.region);
+        }
       }
     };
 
     delegate.didRangeBeaconsInRegion = (pluginResult) => {
       console.log('didRangeBeaconsInRegion:', pluginResult);
     };
-
 
     cordova.plugins.locationManager.setDelegate(delegate);
   }
@@ -75,6 +99,35 @@ export class IBeaconManager {
     return beaconRegion;
   }
 
+  private sendHttpMessage(state: BeaconEvent, beacon: IBeaconState) {
+    const body: HttpPostMessage = {
+      uuid: beacon.uuid,
+      identifier: beacon.identifier,
+      major: beacon.major,
+      minor: beacon.minor,
+      state: state
+    };
+
+    const httpHeaders = new HttpHeaders()
+      .set('Content-Type', 'application/json')
+      .set('Accept', 'application/json');
+
+    this.http.post(this.httpEndPoint, body, { headers: httpHeaders }).subscribe(_ => { }, err => console.error(err));
+  }
+
+}
+
+interface HttpPostMessage {
+  uuid: string;
+  identifier: string;
+  major: number;
+  minor: number;
+  state: BeaconEvent;
+}
+
+enum BeaconEvent {
+  entry,
+  exit
 }
 
 export interface IBeaconState {

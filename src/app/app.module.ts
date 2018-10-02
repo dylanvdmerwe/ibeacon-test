@@ -1,3 +1,4 @@
+import { HttpClientModule } from '@angular/common/http';
 import { ErrorHandler, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { IBeacon } from '@ionic-native/ibeacon';
@@ -9,7 +10,6 @@ import { HomePage } from '../pages/home/home';
 import { IBeaconManager } from '../providers/ibeacon-manager/ibeacon-manager';
 import { MyApp } from './app.component';
 
-
 @NgModule({
   declarations: [
     MyApp,
@@ -17,6 +17,7 @@ import { MyApp } from './app.component';
   ],
   imports: [
     BrowserModule,
+    HttpClientModule,
     IonicModule.forRoot(MyApp)
   ],
   bootstrap: [IonicApp],

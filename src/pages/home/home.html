@@ -3,14 +3,18 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Home</ion-title>
+    <ion-title>iBeacon Tester</ion-title>
   </ion-navbar>
 </ion-header>
 
 <ion-content padding>
-  <h3>iBeacon Tester</h3>
+  <p *ngIf='!started'>Press Start to begin monitoring for beacons.</p>
+  <p *ngIf='started'>Press Stop to remove beacons from being monitored.</p>
 
   <button ion-button type="button" (click)="onStartClicked()" block *ngIf='!started'>Start</button>
   <button ion-button type="button" (click)="stop()" block color='danger' *ngIf='started'>Stop</button>
 
+  <ion-list>
+    <ion-item *ngFor='let log of logs' text-wrap>{{log}}</ion-item>
+  </ion-list>
 </ion-content>
