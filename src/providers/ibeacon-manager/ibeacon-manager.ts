@@ -8,14 +8,13 @@ declare let cordova: any;
 export class IBeaconManager {
 
   private beacons: any[] = [];
-  private httpEndPoint: string = '';
+  private httpEndpoint: string = 'https://ibeacon-test.free.beeceptor.com'; // put your own endpoint here
 
   constructor(private platform: Platform, private ev: Events, private http: HttpClient) {
 
   }
 
-  async setup(httpEndPoint: string) {
-    this.httpEndPoint = httpEndPoint;
+  async setup() {
 
     if (this.platform.is('cordova')) {
       await this.platform.ready();
@@ -69,20 +68,22 @@ export class IBeaconManager {
 
     delegate.didDetermineStateForRegion = (pluginResult) => {
       if (pluginResult.state === 'CLRegionStateInside') {
-        this.ev.publish('onBeaconEnter', pluginResult.region);
-
         // log to an http endpoint
-        if (this.httpEndPoint) {
+        if (this.httpEndpoint) {
           this.sendHttpMessage(BeaconEvent.entry, pluginResult.region);
         }
+
+        // publish event to anyone else listening
+        this.ev.publish('onBeaconEnter', pluginResult.region);
       }
       else if (pluginResult.state === 'CLRegionStateOutside') {
-        this.ev.publish('onBeaconExit', pluginResult.region);
-
         // log to an http endpoint
-        if (this.httpEndPoint) {
+        if (this.httpEndpoint) {
           this.sendHttpMessage(BeaconEvent.exit, pluginResult.region);
         }
+
+        // publish event to anyone else listening
+        this.ev.publish('onBeaconExit', pluginResult.region);
       }
     };
 
@@ -112,7 +113,7 @@ export class IBeaconManager {
       .set('Content-Type', 'application/json')
       .set('Accept', 'application/json');
 
-    this.http.post(this.httpEndPoint, body, { headers: httpHeaders }).subscribe(_ => { }, err => console.error(err));
+    this.http.post(this.httpEndpoint, body, { headers: httpHeaders }).subscribe(_ => { }, err => console.error(err));
   }
 
 }

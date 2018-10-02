@@ -12,8 +12,6 @@ export class HomePage {
   started: boolean = false;
   logs: string[] = [];
 
-  httpEndpoint: string = 'https://ibeacon-test.free.beeceptor.com';
-
   @ViewChild(Content) content: Content;
 
   constructor(private localNotifications: LocalNotifications, private manager: IBeaconManager, private toastCtrl: ToastController, private ev: Events) {
@@ -21,7 +19,7 @@ export class HomePage {
   }
 
   async ionViewDidLoad() {
-    await this.manager.setup(this.httpEndpoint);
+    await this.manager.setup();
     this.localNotifications.requestPermission();
 
     this.ev.subscribe('onBeaconEnter', (beacon: IBeaconState) => {
